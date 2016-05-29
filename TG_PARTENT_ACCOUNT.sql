@@ -1,0 +1,59 @@
+create or replace TRIGGER TG_PARTENT_ACCOUNT 
+BEFORE INSERT OR UPDATE OF AC_ID ON "Account"
+FOR EACH ROW
+DECLARE
+ROWS_FOUND NUMBER;
+
+SRC TG_PARENT_ACCOUNT_PACKAGE.ACCOUNT_ID_T;
+TRG TG_PARENT_ACCOUNT_PACKAGE.ACCOUNT_ID_T;
+
+BEGIN
+
+  -- the id of an account must be an intiger value 
+  IF (IS_NUMBER(:NEW.AC_ID) = 0) THEN
+      RAISE_APPLICATION_ERROR(-20003,'Must be a valid integer number');
+  END IF;
+  
+  -- the id of an accoutn must be either two or three digits long
+  IF ((LENGTH(:NEW.AC_ID) != 3 AND LENGTH(:NEW.AC_ID) != 2)) THEN
+    RAISE_APPLICATION_ERROR(-20003,'The account id is either two or three digits long');
+  END IF;
+
+  -- if the account is a child account we need to check if it has a parent account
+  IF (LENGTH(:NEW.AC_ID) = 3) THEN
+
+    SRC.AC_ID := SUBSTR(:NEW.AC_ID, 1, 2);
+    SRC.CA_ID := :NEW.CA_ID;
+
+    TG_PARENT_ACCOUNT_PACKAGE.ACCOUNT_ARRAY_COUNT := TG_PARENT_ACCOUNT_PACKAGE.ACCOUNT_ARRAY_COUNT + 1;
+    TG_PARENT_ACCOUNT_PACKAGE.ACCOUNT_ARRAY(TG_PARENT_ACCOUNT_PACKAGE.ACCOUNT_ARRAY_COUNT) := SRC;
+     
+  END IF;
+  
+  IF (LENGTH(:OLD.AC_ID) = 2) AND UPDATING THEN
+  
+    SRC.AC_ID := :OLD.AC_ID;
+    SRC.CA_ID := :OLD.CA_ID;
+  
+    TG_PARENT_ACCOUNT_PACKAGE.PARENT_ARRAY_COUNT := TG_PARENT_ACCOUNT_PACKAGE.PARENT_ARRAY_COUNT + 1;
+    TG_PARENT_ACCOUNT_PACKAGE.PARENT_ARRAY(TG_PARENT_ACCOUNT_PACKAGE.PARENT_ARRAY_COUNT) := SRC;
+    
+  END IF;
+  
+  -- if the account is beging updated, all the references to that account need to be updated
+  IF UPDATING THEN
+  
+    SRC.AC_ID := :OLD.AC_ID;
+    SRC.CA_ID := :OLD.CA_ID;
+    
+    TRG.AC_ID := :NEW.AC_ID;
+    TRG.CA_ID := :NEW.CA_ID;
+  
+    TG_PARENT_ACCOUNT_PACKAGE.VE_ACC_FK_UPDATE_ENABLED := FALSE;
+    PR_REWIRE_JOURNAL_VAUCHER(SRC, TRG);
+    PR_REWIRE_JVT(SRC, TRG);
+    TG_PARENT_ACCOUNT_PACKAGE.VE_ACC_FK_UPDATE_ENABLED := TRUE;
+    
+  END IF;
+
+END;
