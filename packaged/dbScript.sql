@@ -1,14 +1,17 @@
 /*==============================================================*/
 /* DBMS name:      ORACLE Version 11g                           */
-/* Created on:     5/24/2016 4:08:45 AM                         */
+/* Created on:     6/6/2016 3:24:02 AM                          */
 /*==============================================================*/
 
 
 alter table "Account"
    drop constraint "FK_ACCOUNT_HAS AN AC_CHART OF";
 
-alter table "Business"
-   drop constraint "FK_BUSINESS_BUSSINESS_CHART OF";
+alter table "BS Has COA"
+   drop constraint "FK_BS HAS C_BUSSINESS_CHART OF";
+
+alter table "BS Has COA"
+   drop constraint "FK_BS HAS C_REFERENCE_BUSINESS";
 
 alter table "Business"
    drop constraint "FK_BUSINESS_GROUP HAS_ACCOUNTA";
@@ -16,14 +19,14 @@ alter table "Business"
 alter table "Journal Vaucher"
    drop constraint "FK_JOURNAL _BUSINESS _CHART OF";
 
+alter table "Journal Vaucher"
+   drop constraint "FK_JOURNAL _REFERENCE_SOFTWARE";
+
 alter table "Journal Vaucher Template"
    drop constraint "FK_JOURNAL _HAS TEMPL_BUSINESS";
 
 alter table "Journal Vaucher Template"
    drop constraint "FK_JOURNAL _TEMPLATE _BUSINESS";
-
-alter table "Journal Vaucher Template Entry"
-   drop constraint "FK_JOURNAL _ACCOUNT F_ACCOUNT";
 
 alter table "Journal Vaucher Template Entry"
    drop constraint "FK_JOURNAL _BUSSINES _BUSINESS";
@@ -33,9 +36,6 @@ alter table "Journal Vaucher Template Entry"
 
 alter table "Software User"
    drop constraint "FK_SOFTWARE_BELONGS T_ACCOUNTA";
-
-alter table "Vaucher Entry"
-   drop constraint "FK_VAUCHER _ENTRY FOR_ACCOUNT";
 
 alter table "Vaucher Entry"
    drop constraint "FK_VAUCHER _ENTRY FOR_BUSINESS";
@@ -60,6 +60,8 @@ alter table "Accountant User Group"
    drop primary key cascade;
 
 drop table "Accountant User Group" cascade constraints;
+
+drop table "BS Has COA" cascade constraints;
 
 drop index BUSSINESS_HAS_ACCOUNTS2_FK;
 
@@ -135,7 +137,7 @@ drop table "Vaucher Entry Type" cascade constraints;
 create table "Account" 
 (
    CA_ID                INTEGER              not null,
-   AC_ID                INTEGER              not null,
+   AC_ID                VARCHAR(3)           not null,
    AC_NAME              VARCHAR2(60)         not null
 );
 
@@ -162,12 +164,20 @@ alter table "Accountant User Group"
    add constraint "PK_ACCOUNTANT USER GROUP" primary key (SUG_ID);
 
 /*==============================================================*/
+/* Table: "BS Has COA"                                          */
+/*==============================================================*/
+create table "BS Has COA" 
+(
+   CA_ID                INTEGER,
+   BS_ID                INTEGER
+);
+
+/*==============================================================*/
 /* Table: "Business"                                            */
 /*==============================================================*/
 create table "Business" 
 (
    BS_ID                INTEGER              not null,
-   CA_ID                INTEGER              not null,
    SUG_ID               INTEGER              not null,
    BS_NAME              VARCHAR2(60)         not null,
    BS_MBR               VARCHAR2(60)         not null,
@@ -216,6 +226,7 @@ create table "Journal Vaucher"
 (
    JV_ID                INTEGER              not null,
    CA_ID                INTEGER              not null,
+   SU_ID                INTEGER,
    JV_CODE              INTEGER              not null,
    JV_DOCUMENT_NUMBER   INTEGER              not null,
    JV_DATE_OF_RECORDING DATE                 not null,
@@ -266,7 +277,7 @@ create table "Journal Vaucher Template Entry"
 (
    JVTE_ID              INTEGER              not null,
    CA_ID                INTEGER              not null,
-   AC_ID                INTEGER              not null,
+   AC_ID                VARCHAR(3)           not null,
    JVT_ID               INTEGER              not null,
    BS_ID                INTEGER,
    JVTE_DESCRIPTION     VARCHAR2(2000),
@@ -334,7 +345,7 @@ create table "Vaucher Entry"
    VET_ID               INTEGER,
    BS_ID                INTEGER              not null,
    CA_ID                INTEGER              not null,
-   AC_ID                INTEGER              not null,
+   AC_ID                VARCHAR(3)           not null,
    JVE_DESCRIPTION      VARCHAR2(2000),
    JVE_DEBITS           NUMBER(10,4)         not null,
    JVE_CREDITS          NUMBER(10,4)         not null
@@ -398,9 +409,13 @@ alter table "Account"
    add constraint "FK_ACCOUNT_HAS AN AC_CHART OF" foreign key (CA_ID)
       references "Chart of Accounts" (CA_ID);
 
-alter table "Business"
-   add constraint "FK_BUSINESS_BUSSINESS_CHART OF" foreign key (CA_ID)
+alter table "BS Has COA"
+   add constraint "FK_BS HAS C_BUSSINESS_CHART OF" foreign key (CA_ID)
       references "Chart of Accounts" (CA_ID);
+
+alter table "BS Has COA"
+   add constraint "FK_BS HAS C_REFERENCE_BUSINESS" foreign key (BS_ID)
+      references "Business" (BS_ID);
 
 alter table "Business"
    add constraint "FK_BUSINESS_GROUP HAS_ACCOUNTA" foreign key (SUG_ID)
@@ -410,6 +425,10 @@ alter table "Journal Vaucher"
    add constraint "FK_JOURNAL _BUSINESS _CHART OF" foreign key (CA_ID)
       references "Chart of Accounts" (CA_ID);
 
+alter table "Journal Vaucher"
+   add constraint "FK_JOURNAL _REFERENCE_SOFTWARE" foreign key (SU_ID)
+      references "Software User" (SU_ID);
+
 alter table "Journal Vaucher Template"
    add constraint "FK_JOURNAL _HAS TEMPL_BUSINESS" foreign key (BS_PART_ID)
       references "Business" (BS_ID);
@@ -417,10 +436,6 @@ alter table "Journal Vaucher Template"
 alter table "Journal Vaucher Template"
    add constraint "FK_JOURNAL _TEMPLATE _BUSINESS" foreign key (BS_ID)
       references "Business" (BS_ID);
-
-alter table "Journal Vaucher Template Entry"
-   add constraint "FK_JOURNAL _ACCOUNT F_ACCOUNT" foreign key (CA_ID, AC_ID)
-      references "Account" (CA_ID, AC_ID);
 
 alter table "Journal Vaucher Template Entry"
    add constraint "FK_JOURNAL _BUSSINES _BUSINESS" foreign key (BS_ID)
@@ -433,10 +448,6 @@ alter table "Journal Vaucher Template Entry"
 alter table "Software User"
    add constraint "FK_SOFTWARE_BELONGS T_ACCOUNTA" foreign key (SUG_ID)
       references "Accountant User Group" (SUG_ID);
-
-alter table "Vaucher Entry"
-   add constraint "FK_VAUCHER _ENTRY FOR_ACCOUNT" foreign key (CA_ID, AC_ID)
-      references "Account" (CA_ID, AC_ID);
 
 alter table "Vaucher Entry"
    add constraint "FK_VAUCHER _ENTRY FOR_BUSINESS" foreign key (BS_ID)
